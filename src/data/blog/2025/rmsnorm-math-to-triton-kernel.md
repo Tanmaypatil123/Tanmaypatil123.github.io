@@ -1,5 +1,5 @@
 ---
-title: "RMSNorm Backward: From Derivation to a Fast Triton Kernel"
+title: "RMSNorm Backward: From Derivation to a Triton Kernel"
 author: Tanmay
 pubDatetime: 2025-11-01T13:30:00Z
 slug: rmsnorm-backward-derivation-triton-kernel
@@ -13,18 +13,16 @@ tags:
   - pytorch
   - gpu-kernels
   - deep-learning
-  - llama
-  - gemma
 ogImage: ../../../assets/images/rms_norm.png
-description: "Derive RMSNorm backward step by step and implement a fast Triton kernel with PyTorch tests, numerics tips, and notes for Gemma/Llama variants."
+description: "Derive RMSNorm backward step by step and implement a Triton kernel with PyTorch, numerics tips"
 canonicalURL: "https://tanmaypatil123.github.io/posts/2025/rmsnorm-backward-derivation-triton-kernel"  # add your canonical URL if cross-posted/
 ---
 
-> **TL;DR**: We derive RMSNorm backward in plain math (no scary notation), implement a forward+backward Triton kernel, and verify gradients against PyTorch
+> **TL;DR**: We derive RMSNorm backward in plain math (no scary notation), implement a forward+backward Triton kernel.
 
 ## Why RMSNorm ?
 
-RMSNorm introduces No mean subtraction, fewer ops, simpler math; used in modern LLMs (e.g., Llama/Gemma). Good “real world” relevance over LayerNorm.
+RMSNorm introduces No mean subtraction, fewer ops, simpler math; used in modern LLMs. Good “real world” relevance over LayerNorm.
 
 ---
 
