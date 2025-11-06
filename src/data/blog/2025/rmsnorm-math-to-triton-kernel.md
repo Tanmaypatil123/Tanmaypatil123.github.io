@@ -294,7 +294,6 @@ class RMS_Layernorm(torch.autograd.Function):
         n_rows : int
         n_cols : int
         n_rows, n_cols = dY.shape
-        # dW = X
         dX = dY
 
         with torch.cuda.device(dY.device):
@@ -304,7 +303,6 @@ class RMS_Layernorm(torch.autograd.Function):
                 X,  X .stride(0),
                 W,  W .stride(0),
                 r,  r .stride(0),
-                # dW, dW.stride(0),
                 n_cols, ctx.eps,
                 BLOCK_SIZE = ctx.BLOCK_SIZE,
             )
