@@ -2,6 +2,10 @@
 
 @layer base {
   /* ===== Override default Tailwind Typography styles ===== */
+  .prose .katex-display {
+    @apply text-foreground;
+  }
+  
   .app-prose {
     @apply prose;
 
@@ -115,5 +119,29 @@
     .highlighted-word {
       @apply rounded-sm border border-border px-0.5 py-px;
     }
+  }
+}
+
+@layer base {
+  /* Keep KaTeX equations bright in both themes */
+  .app-prose .katex-display,
+  .app-prose .katex-display .katex,
+  .app-prose .katex-display .katex *,
+  .app-prose .katex,
+  .app-prose .katex * {
+    @apply text-foreground;
+    opacity: 1 !important;
+  }
+
+  /* Equation numbers from \tag{...} */
+  .app-prose .katex .tag,
+  .app-prose .katex-display .tag {
+    @apply text-foreground;
+    opacity: 1 !important;
+  }
+
+  /* In case Typography targets display math inside paragraphs */
+  .app-prose p > .katex-display {
+    opacity: 1 !important;
   }
 }
