@@ -1,7 +1,7 @@
 ---
 title: "Inside a Blackwell 2-CTA GEMM: A Gluon Kernel Tour"
 author: Tanmay
-pubDatetime: 2026-06-18T10:00:00Z
+pubDatetime: 2026-06-17T10:00:00Z
 slug: blackwell-2cta-gluon-gemm
 featured: true
 draft: false
