@@ -1,0 +1,120 @@
+---
+import IconGitHub from "@/assets/icons/IconGitHub.svg";
+import LinkButton from "./LinkButton.astro";
+import { getGithubProfile } from "@/utils/getGithubProfile";
+import {
+  getGithubContributions,
+  type ContributionDay,
+} from "@/utils/getGithubContributions";
+
+export interface Props {
+  href: string;
+  title: string;
+  username: string;
+}
+
+const { href, title, username } = Astro.props;
+
+const [profile, contributions] = await Promise.all([
+  getGithubProfile(username),
+  getGithubContributions(username),
+]);
+
+// Arrange contribution days into week-columns (GitHub layout): the first
+// column is padded so each column starts on Sunday.
+const weeks: (ContributionDay | null)[][] = [];
+if (contributions) {
+  const days = contributions.days;
+  const startPad = new Date(days[0].date + "T00:00:00Z").getUTCDay();
+  const padded = [...Array(startPad).fill(null), ...days];
+  for (let i = 0; i < padded.length; i += 7) {
+    weeks.push(padded.slice(i, i + 7));
+  }
+}
+// Column-major order for `grid-flow-col`.
+const cells = weeks.flat();
+
+const levelClass = [
+  "bg-foreground/10", // 0 — no contributions
+  "bg-[#0e4429]", // 1
+  "bg-[#006d32]", // 2
+  "bg-[#26a641]", // 3
+  "bg-[#39d353]", // 4
+];
+
+const numberFmt = new Intl.NumberFormat("en-US");
+---
+
+<div class="group/gh relative inline-flex">
+  <LinkButton href={href} class="p-2 hover:rotate-6 sm:p-1" title={title}>
+    <IconGitHub
+      class="inline-block size-6 scale-125 fill-transparent stroke-current stroke-2 opacity-90 sm:scale-110"
+    />
+    <span class="sr-only">{title}</span>
+  </LinkButton>
+
+  {
+    profile && (
+      <div
+        role="tooltip"
+        class="pointer-events-none absolute bottom-full right-0 z-50 mb-3 w-72 translate-y-1 rounded-lg border border-border bg-background p-4 opacity-0 shadow-xl transition-all duration-200 group-hover/gh:pointer-events-auto group-hover/gh:translate-y-0 group-hover/gh:opacity-100 group-focus-within/gh:pointer-events-auto group-focus-within/gh:translate-y-0 group-focus-within/gh:opacity-100"
+      >
+        <div class="flex items-center gap-3">
+          <img
+            src={profile.avatar_url}
+            alt={`${profile.login} avatar`}
+            width="48"
+            height="48"
+            loading="lazy"
+            decoding="async"
+            class="size-12 rounded-full border border-border"
+          />
+          <div class="min-w-0 leading-tight">
+            <p class="truncate font-semibold">{profile.name ?? profile.login}</p>
+            <p class="truncate text-sm opacity-70">@{profile.login}</p>
+          </div>
+        </div>
+
+        <div class="mt-3 flex gap-4 border-t border-border pt-3 text-sm">
+          <span>
+            <span class="font-semibold">
+              {numberFmt.format(profile.public_repos)}
+            </span>{" "}
+            <span class="opacity-70">repos</span>
+          </span>
+          <span>
+            <span class="font-semibold">
+              {numberFmt.format(profile.followers)}
+            </span>{" "}
+            <span class="opacity-70">followers</span>
+          </span>
+        </div>
+
+        {contributions && (
+          <div class="mt-3">
+            <div
+              class="grid grid-flow-col gap-[2px]"
+              style={`grid-template-rows: repeat(7, 1fr); grid-template-columns: repeat(${weeks.length}, minmax(0, 1fr));`}
+            >
+              {cells.map(day => (
+                <span
+                  class:list={[
+                    "aspect-square rounded-[1px]",
+                    day ? levelClass[day.level] : "bg-transparent",
+                  ]}
+                  title={
+                    day ? `${day.count} contributions on ${day.date}` : undefined
+                  }
+                />
+              ))}
+            </div>
+            <p class="mt-2 text-xs opacity-60">
+              {numberFmt.format(contributions.total)} contributions in the last
+              year
+            </p>
+          </div>
+        )}
+      </div>
+    )
+  }
+</div>

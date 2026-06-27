@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Krea Turbo SVDQuant",
+    "role": "Author",
+    "task": "Text-to-Image",
+    "baseModel": "krea/Krea-2-Turbo",
+    "repo": "Patil/krea-turbo-svdquant",
+    "link": "https://huggingface.co/Patil/krea-turbo-svdquant",
+    "description": "A 4-bit (W4A4) SVDQuant build of the Krea Turbo diffusion transformer, packaged for the Nunchaku runtime. SVDQuant pushes both weights and activations down to 4-bit while absorbing the resulting outliers with a low-rank branch, so the model keeps near-FP16 image quality at roughly a quarter of the memory and a sizeable inference speed-up. Turbo distillation on top means high-fidelity text-to-image generation in just a handful of sampling steps, making it practical to run on consumer GPUs.",
+    "tags": ["Diffusion", "SVDQuant", "4-bit", "Quantization", "Text-to-Image"]
+  }
+]

@@ -1,25 +1,41 @@
 ---
 import { SOCIALS } from "@/constants";
 import LinkButton from "./LinkButton.astro";
+import GithubCard from "./GithubCard.astro";
 
 export interface Props {
   centered?: boolean;
+  githubCard?: boolean;
 }
 
-const { centered = false } = Astro.props;
+const { centered = false, githubCard = false } = Astro.props;
+
+// Pull the GitHub username out of its profile URL for the hovercard.
+const githubUsername = SOCIALS.find(s => s.name === "GitHub")
+  ?.href.replace(/\/+$/, "")
+  .split("/")
+  .pop();
 ---
 
 <div class:list={["flex-wrap justify-center gap-1", { flex: centered }]}>
   {
-    SOCIALS.map(social => (
-      <LinkButton
-        href={social.href}
-        class="p-2 hover:rotate-6 sm:p-1"
-        title={social.linkTitle}
-      >
-        <social.icon class="inline-block size-6 scale-125 fill-transparent stroke-current stroke-2 opacity-90 group-hover:fill-transparent sm:scale-110" />
-        <span class="sr-only">{social.linkTitle}</span>
-      </LinkButton>
-    ))
+    SOCIALS.map(social =>
+      githubCard && social.name === "GitHub" && githubUsername ? (
+        <GithubCard
+          href={social.href}
+          title={social.linkTitle}
+          username={githubUsername}
+        />
+      ) : (
+        <LinkButton
+          href={social.href}
+          class="p-2 hover:rotate-6 sm:p-1"
+          title={social.linkTitle}
+        >
+          <social.icon class="inline-block size-6 scale-125 fill-transparent stroke-current stroke-2 opacity-90 group-hover:fill-transparent sm:scale-110" />
+          <span class="sr-only">{social.linkTitle}</span>
+        </LinkButton>
+      )
+    )
   }
 </div>
