@@ -2,6 +2,7 @@
 import { ClientRouter } from "astro:transitions";
 import { PUBLIC_GOOGLE_SITE_VERIFICATION } from "astro:env/client";
 import { SITE } from "@/config";
+import { SOCIALS } from "@/constants";
 import "@/styles/global.css";
 
 export interface Props {
@@ -14,6 +15,7 @@ export interface Props {
   pubDatetime?: Date;
   modDatetime?: Date | null;
   scrollSmooth?: boolean;
+  noindex?: boolean;
 }
 
 const {
@@ -26,25 +28,55 @@ const {
   pubDatetime,
   modDatetime,
   scrollSmooth = false,
+  noindex = false,
 } = Astro.props;
 
 const socialImageURL = new URL(ogImage, Astro.url);
 
-const structuredData = {
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  headline: `${title}`,
-  image: `${socialImageURL}`,
-  datePublished: `${pubDatetime?.toISOString()}`,
-  ...(modDatetime && { dateModified: modDatetime.toISOString() }),
-  author: [
-    {
-      "@type": "Person",
-      name: `${author}`,
-      ...(profile && { url: profile }),
-    },
-  ],
+// A page is an article only when it has a publish date (blog posts).
+const isArticle = !!pubDatetime;
+const ogType = isArticle ? "article" : "website";
+
+// Public profile links so search engines know these accounts are the same person.
+const sameAs = SOCIALS.filter(s => !s.href.startsWith("mailto:")).map(
+  s => s.href
+);
+
+const personSchema = {
+  "@type": "Person",
+  name: author,
+  url: profile || SITE.website,
+  sameAs,
 };
+
+const structuredData = isArticle
+  ? {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      headline: title,
+      description,
+      image: `${socialImageURL}`,
+      datePublished: pubDatetime!.toISOString(),
+      ...(modDatetime && { dateModified: modDatetime.toISOString() }),
+      author: [personSchema],
+      publisher: {
+        "@type": "Person",
+        name: SITE.author,
+        url: SITE.website,
+      },
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": `${canonicalURL}`,
+      },
+    }
+  : {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: SITE.title,
+      url: SITE.website,
+      description,
+      author: personSchema,
+    };
 ---
 
 <!doctype html>
@@ -67,7 +99,16 @@ const structuredData = {
     <meta name="author" content={author} />
     <link rel="sitemap" href="/sitemap-index.xml" />
 
+    <!-- Robots -->
+    <meta
+      name="robots"
+      content={noindex ? "noindex, nofollow" : "index, follow"}
+    />
+
     <!-- Open Graph / Facebook -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={SITE.title} />
+    <meta property="og:locale" content={SITE.ogLocale} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalURL} />
@@ -93,6 +134,8 @@ const structuredData = {
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:site" content={SITE.twitter} />
+    <meta property="twitter:creator" content={SITE.twitter} />
     <meta property="twitter:url" content={canonicalURL} />
     <meta property="twitter:title" content={title} />
     <meta property="twitter:description" content={description} />
@@ -114,7 +157,16 @@ const structuredData = {
       href={new URL("rss.xml", Astro.site)}
     />
 
-    <meta name="theme-color" content="" />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: light)"
+      content="#f6eee1"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#212737"
+    />
 
     {
       // If PUBLIC_GOOGLE_SITE_VERIFICATION is set in the environment variable,

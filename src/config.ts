@@ -1,10 +1,12 @@
 export const SITE = {
-  website: "https://tanmaypatil123.github.io/", // replace this with your deployed domain
+  website: "https://www.tanmaypatil.com/", // replace this with your deployed domain
   author: "Tanmay Patil",
-  profile: "https://tanmaypatil123.github.io/",
-  desc: "A blog about programming, technology, and software development.",
+  profile: "https://www.tanmaypatil.com/",
+  desc: "Machine Learning Engineer focused on GPU programming, inference optimization, and diffusion research. Blog posts, projects, and ML models by Tanmay Patil.",
   title: "Tanmay Patil's Blog",
   ogImage: "astropaper-og.jpg",
+  ogLocale: "en_US", // Open Graph locale (og:locale)
+  twitter: "@TanmayPatil79", // Twitter/X handle for twitter:site & twitter:creator
   lightAndDarkMode: true,
   postPerIndex: 4,
   postPerPage: 4,

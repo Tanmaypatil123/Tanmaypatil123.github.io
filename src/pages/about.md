@@ -1,6 +1,7 @@
 ---
 layout: ../layouts/AboutLayout.astro
 title: "About"
+description: "Tanmay Patil — Machine Learning Engineer at ModelsLab working on GPU programming, inference optimization, and diffusion research. Experience, projects, and how to get in touch."
 ---
 
 Hi, I'm **Tanmay Dipak Patil** — a Machine Learning Engineer with a focus on GPU programming, inference optimization, and diffusion research.
