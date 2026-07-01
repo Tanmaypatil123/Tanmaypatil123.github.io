@@ -3,6 +3,7 @@ import IconMail from "@/assets/icons/IconMail.svg";
 import IconGitHub from "@/assets/icons/IconGitHub.svg";
 import IconBrandX from "@/assets/icons/IconBrandX.svg";
 import IconLinkedin from "@/assets/icons/IconLinkedin.svg";
+import IconHuggingFace from "@/assets/icons/IconHuggingFace.svg";
 import IconWhatsapp from "@/assets/icons/IconWhatsapp.svg";
 import IconFacebook from "@/assets/icons/IconFacebook.svg";
 import IconTelegram from "@/assets/icons/IconTelegram.svg";
@@ -34,6 +35,12 @@ export const SOCIALS: Social[] = [
     href: "https://www.linkedin.com/in/mlwithtanmay/",
     linkTitle: `${SITE.title} on LinkedIn`,
     icon: IconLinkedin,
+  },
+  {
+    name: "Hugging Face",
+    href: "https://huggingface.co/Patil",
+    linkTitle: `${SITE.title} on Hugging Face`,
+    icon: IconHuggingFace,
   },
   {
     name: "Mail",
