@@ -1,15 +1,5 @@
 [
   {
-    "name": "Krea Turbo SVDQuant",
-    "role": "Author",
-    "task": "Text-to-Image",
-    "baseModel": "krea/Krea-2-Turbo",
-    "repo": "Patil/krea-turbo-svdquant",
-    "link": "https://huggingface.co/Patil/krea-turbo-svdquant",
-    "description": "A 4-bit (W4A4) SVDQuant build of the Krea Turbo diffusion transformer, packaged for the Nunchaku runtime. SVDQuant pushes both weights and activations down to 4-bit while absorbing the resulting outliers with a low-rank branch, so the model keeps near-FP16 image quality at roughly a quarter of the memory and a sizeable inference speed-up. Turbo distillation on top means high-fidelity text-to-image generation in just a handful of sampling steps, making it practical to run on consumer GPUs.",
-    "tags": ["Diffusion", "SVDQuant", "4-bit", "Quantization", "Text-to-Image"]
-  },
-  {
     "name": "Krea 2 Depth ControlNet",
     "role": "Author",
     "task": "Depth-to-Image",
@@ -18,5 +8,16 @@
     "link": "https://huggingface.co/Patil/Krea-2-depth-controlnet",
     "description": "A depth-conditioned ControlNet for the Krea 2 diffusion model, letting you steer text-to-image generation with a depth map so the output respects the spatial layout and 3D structure of a reference. Feed in a depth map (from an existing image or a depth estimator) alongside your prompt and the ControlNet keeps foreground/background relationships and object placement intact while the base model handles style and content, making it well suited for consistent scene composition, relighting, and structure-preserving image variations.",
     "tags": ["Diffusion", "ControlNet", "Depth", "Text-to-Image", "Structure Control"]
+  },
+  {
+    "name": "Krea Turbo SVDQuant",
+    "role": "Author",
+    "task": "Text-to-Image",
+    "baseModel": "krea/Krea-2-Turbo",
+    "repo": "Patil/krea-turbo-svdquant",
+    "link": "https://huggingface.co/Patil/krea-turbo-svdquant",
+    "description": "A 4-bit (W4A4) SVDQuant build of the Krea Turbo diffusion transformer, packaged for the Nunchaku runtime. SVDQuant pushes both weights and activations down to 4-bit while absorbing the resulting outliers with a low-rank branch, so the model keeps near-FP16 image quality at roughly a quarter of the memory and a sizeable inference speed-up. Turbo distillation on top means high-fidelity text-to-image generation in just a handful of sampling steps, making it practical to run on consumer GPUs.",
+    "tags": ["Diffusion", "SVDQuant", "4-bit", "Quantization", "Text-to-Image"]
   }
+  
 ]

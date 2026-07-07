@@ -10,10 +10,10 @@ I currently work at **ModelsLab**, where I build and optimize inference interfac
 
 ## What I do
 
-- **ML / AI:** TensorFlow, PyTorch, Transformers, Scikit-learn, Diffusers, Computer Vision
-- **GPU Programming:** Triton, Cutlass, Cute-dsl, Hip, Hipkittens, ROCm, MSL, Enigma, Gluon
-- **Programming:** Python, JavaScript, Dart
-- **Tools:** Git, Docker, Kubernetes, AWS, Django, FastAPI
+- **ML / AI:** TensorFlow, PyTorch, Transformers, Diffusers, Computer Vision
+- **GPU Programming:** Triton, Cute-dsl, Hip, Hipkittens, CUDA
+- **Programming:** Python, JavaScript, Dart, C++
+- **Tools:** Git, Docker, Kubernetes, Django, FastAPI
 
 ## Experience
 
@@ -26,7 +26,6 @@ I currently work at **ModelsLab**, where I build and optimize inference interfac
 **PandasAI** — Software Engineer Intern _(Sep 2023 – Jan 2024)_
 
 - Spearheaded development of open-source online connectors and streamlined pipeline construction for LLMs, enhancing data accessibility and deployment efficiency.
-- Contributed to MLOps pipeline development and deployment, curated and optimized datasets for LLM fine-tuning, and designed comprehensive testing scripts for model evaluation.
 
 **Intersense Technologies LLP** — Python Developer Intern _(Feb 2022 – Nov 2022)_
 
@@ -34,10 +33,14 @@ I currently work at **ModelsLab**, where I build and optimize inference interfac
 
 ## Projects
 
+**[Krea 2 Depth ControlNet LoRA](https://huggingface.co/Patil/Krea-2-depth-controlnet)** — depth-conditioned image generation
+
+- Developed and published a depth-conditioned ControlNet-LoRA for Krea-2, enabling image-to-image generation that preserves 3D structure and composition from input depth maps.
+- Implemented latent-space depth control using Depth-Anything-V2, Qwen-Image VAE conditioning, and rank-64 LoRA adaptation, achieving 0.98–0.99 depth consistency across generations.
+
 **[Enigma DSL](https://github.com/Klyne-org/Enigma-DSL)** — an MLIR-based GPU kernel compiler
 
-- A Python DSL inspired by NVIDIA's CuTe DSL / CUTLASS, porting its layout algebra (composition, complement, coalesce, zipped divide, Thread–Value layouts) to a new GPU backend via a custom MLIR dialect that lowers to GPU machine code.
-- Achieved a 1.09× speedup over handwritten Metal on fused SDPA and 92.6 tok/s single-dispatch Qwen3-0.6B decode on M4.
+- Built a Python GPU kernel DSL that traces into a custom MLIR dialect and lowers to native GPU shading language, applying CuTe-style layout algebra (composition, coalesce, TV layouts) to map threads/wavefronts to memory.
 - Published to PyPI as `enigma-dsl`.
 
 **[ModelQ](https://github.com/ModelsLab/modelq)** — a lightweight, production-ready async task library
@@ -56,3 +59,6 @@ I currently work at **ModelsLab**, where I build and optimize inference interfac
 
 - 📧 [tanmaypatil3151@gmail.com](mailto:tanmaypatil3151@gmail.com)
 - 💻 [GitHub](https://github.com/Tanmaypatil123)
+- 🤗 [Hugging Face](https://huggingface.co/Patil)
+- 🐦 [Twitter/X](https://x.com/TanmayPatil79)
+- 📄 [Resume](https://drive.google.com/file/d/1-cd4c1q_h6-QrsiXKZgnL2-c7UfXv57a/view?usp=sharing)
