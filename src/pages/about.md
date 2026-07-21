@@ -61,4 +61,4 @@ I currently work at **ModelsLab**, where I build and optimize inference interfac
 - 💻 [GitHub](https://github.com/Tanmaypatil123)
 - 🤗 [Hugging Face](https://huggingface.co/Patil)
 - 🐦 [Twitter/X](https://x.com/TanmayPatil79)
-- 📄 [Resume](https://drive.google.com/file/d/1-cd4c1q_h6-QrsiXKZgnL2-c7UfXv57a/view?usp=sharing)
+- 📄 [Resume](https://drive.google.com/file/d/15Wq0nSR0ZtrsWPzVAW6C3fsCQQYItCka/view?usp=sharing)
