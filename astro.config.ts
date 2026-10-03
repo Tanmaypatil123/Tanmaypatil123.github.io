@@ -18,7 +18,14 @@ export default defineConfig({
   site: SITE.website,
   integrations: [
     sitemap({
-      filter: page => SITE.showArchives || !page.endsWith("/archives"),
+      filter: page => {
+        const path = page.replace(/\/$/, "");
+        return (
+          (SITE.showArchives || !path.endsWith("/archives")) &&
+          !path.endsWith("/chainfall-privacy") &&
+          !path.endsWith("/chainfall-terms")
+        );
+      },
     }),
   ],
   markdown: {
