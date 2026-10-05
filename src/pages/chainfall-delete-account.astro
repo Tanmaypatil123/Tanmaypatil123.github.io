@@ -32,25 +32,25 @@ const CONTACT_EMAIL = "tanmaypatil3151@gmail.com";
     <label class="flex flex-col gap-1">
       <span>Email address <span class="text-accent">*</span></span>
       <input name="email" type="email" required maxlength="254" autocomplete="email"
-        class="rounded border border-border bg-transparent px-3 py-2" />
+        class="rounded border border-border bg-transparent px-3 py-2 text-foreground placeholder:text-foreground/50" />
     </label>
     <label class="flex flex-col gap-1">
       <span>Player ID</span>
       <input name="player_id" type="text" maxlength="64"
-        class="rounded border border-border bg-transparent px-3 py-2" />
+        class="rounded border border-border bg-transparent px-3 py-2 text-foreground placeholder:text-foreground/50" />
     </label>
     <label class="flex flex-col gap-1">
       <span>Display name</span>
       <input name="display_name" type="text" maxlength="64"
-        class="rounded border border-border bg-transparent px-3 py-2" />
+        class="rounded border border-border bg-transparent px-3 py-2 text-foreground placeholder:text-foreground/50" />
     </label>
     <label class="flex flex-col gap-1">
       <span>Anything else we should know</span>
       <textarea name="note" rows="3" maxlength="1000"
-        class="rounded border border-border bg-transparent px-3 py-2"></textarea>
+        class="rounded border border-border bg-transparent px-3 py-2 text-foreground placeholder:text-foreground/50"></textarea>
     </label>
     <label class="flex items-start gap-2">
-      <input name="confirm" type="checkbox" required class="mt-1" />
+      <input name="confirm" type="checkbox" required class="mt-1 accent-accent" />
       <span>I understand deletion is permanent and purchased gems and items will not be refunded.</span>
     </label>
     <button type="submit"
