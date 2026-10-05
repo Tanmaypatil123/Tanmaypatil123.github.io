@@ -1,0 +1,119 @@
+---
+import AboutLayout from "@/layouts/AboutLayout.astro";
+
+// No backend: submitting opens the visitor's email app with the request filled in.
+const CONTACT_EMAIL = "tanmaypatil3151@gmail.com";
+---
+
+<AboutLayout
+  frontmatter={{
+    title: "Delete your Chainfall account",
+    description:
+      "How to delete your Chainfall account and data, in the app or by request.",
+    noindex: true,
+  }}
+>
+  <p><em>Chainfall</em>, developed by Tanmay Patil</p>
+
+  <h2>Delete in the app (instant)</h2>
+  <p>
+    Open Chainfall and go to <strong>Profile → Settings → Account → Delete account</strong>,
+    then tap <strong>DELETE FOREVER</strong>. Your account and data are removed right away.
+  </p>
+
+  <h2>Request deletion without the app</h2>
+  <p>
+    If you no longer have the app installed, send a request below. We will email you to confirm the
+    account is yours, then delete it within 30 days. Your Player ID is on your profile in the
+    app (<strong>COPY ID</strong>). If you don't have it, give us the display name you used.
+  </p>
+
+  <form id="delete-form" class="not-prose my-6 flex flex-col gap-4" data-email={CONTACT_EMAIL}>
+    <label class="flex flex-col gap-1">
+      <span>Email address <span class="text-accent">*</span></span>
+      <input name="email" type="email" required maxlength="254" autocomplete="email"
+        class="rounded border border-border bg-transparent px-3 py-2" />
+    </label>
+    <label class="flex flex-col gap-1">
+      <span>Player ID</span>
+      <input name="player_id" type="text" maxlength="64"
+        class="rounded border border-border bg-transparent px-3 py-2" />
+    </label>
+    <label class="flex flex-col gap-1">
+      <span>Display name</span>
+      <input name="display_name" type="text" maxlength="64"
+        class="rounded border border-border bg-transparent px-3 py-2" />
+    </label>
+    <label class="flex flex-col gap-1">
+      <span>Anything else we should know</span>
+      <textarea name="note" rows="3" maxlength="1000"
+        class="rounded border border-border bg-transparent px-3 py-2"></textarea>
+    </label>
+    <label class="flex items-start gap-2">
+      <input name="confirm" type="checkbox" required class="mt-1" />
+      <span>I understand deletion is permanent and purchased gems and items will not be refunded.</span>
+    </label>
+    <button type="submit"
+      class="self-start rounded bg-accent px-5 py-2 font-medium text-background">
+      Request deletion
+    </button>
+    <p id="delete-status" role="status" class="min-h-6"></p>
+  </form>
+
+  <p>You can also email <a href={`mailto:${CONTACT_EMAIL}?subject=Delete%20my%20Chainfall%20account`}>{CONTACT_EMAIL}</a>
+    with the subject "Delete my Chainfall account".</p>
+
+  <h2>What is deleted</h2>
+  <ul>
+    <li>Your Chainfall account (Unity Authentication player)</li>
+    <li>Progress: trophies, level, XP, quests, season standing and match history</li>
+    <li>Coins, gems and cosmetic items, including purchased ones</li>
+    <li>Analytics events linked to your player ID</li>
+  </ul>
+
+  <h2>What may be kept</h2>
+  <ul>
+    <li>
+      Purchase records held by Google Play or the App Store, which they keep under their own
+      policies. We cannot delete these.
+    </li>
+    <li>
+      Data held by our ad partners (Unity LevelPlay and the ad networks it uses), kept under their own
+      privacy policies.
+    </li>
+    <li>Your deletion request itself, kept for up to 90 days so we can show it was handled.</li>
+  </ul>
+
+  <p>See the <a href="/chainfall-privacy">Chainfall Privacy Policy</a> for more details.</p>
+</AboutLayout>
+
+<script>
+  function initDeleteForm() {
+    const form = document.querySelector<HTMLFormElement>("#delete-form");
+    if (!form || form.dataset.ready) return;
+    form.dataset.ready = "1";
+    const status = form.querySelector<HTMLElement>("#delete-status")!;
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const body = [
+        "Please delete my Chainfall account.",
+        "",
+        `Email: ${data.get("email")}`,
+        `Player ID: ${data.get("player_id") || "-"}`,
+        `Display name: ${data.get("display_name") || "-"}`,
+        `Note: ${data.get("note") || "-"}`,
+        "",
+        "I understand deletion is permanent and purchased gems and items will not be refunded.",
+      ].join("\n");
+      window.location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent(
+        "Delete my Chainfall account"
+      )}&body=${encodeURIComponent(body)}`;
+      status.textContent =
+        "Your email app should open with the request filled in. Send it and we'll confirm, then delete your account within 30 days.";
+    });
+  }
+  initDeleteForm();
+  document.addEventListener("astro:page-load", initDeleteForm);
+</script>

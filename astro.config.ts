@@ -23,7 +23,8 @@ export default defineConfig({
         return (
           (SITE.showArchives || !path.endsWith("/archives")) &&
           !path.endsWith("/chainfall-privacy") &&
-          !path.endsWith("/chainfall-terms")
+          !path.endsWith("/chainfall-terms") &&
+          !path.endsWith("/chainfall-delete-account")
         );
       },
     }),
