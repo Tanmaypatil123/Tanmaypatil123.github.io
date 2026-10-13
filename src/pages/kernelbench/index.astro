@@ -1,0 +1,311 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import Breadcrumb from "@/components/Breadcrumb.astro";
+import { SITE } from "@/config";
+import models from "@/data/kernelbench.json";
+
+// every graded kernel + harness; solution files live at solutions/<slug>/<problem>/solution.py
+const REPO = "https://github.com/Tanmaypatil123/hermes-kernelbench";
+const solutionUrl = (slug: string, problem: string) => `${REPO}/blob/main/solutions/${slug}/${problem}/solution.py`;
+
+const pageTitle = "KernelBench-Hard × Hermes Agent";
+const pageDesc =
+  "Five open and frontier models, driven by Hermes Agent, writing real GPU kernels for all six KernelBench-Hard problems on an RTX PRO 6000.";
+
+type ProblemId = "fp8" | "kda" | "paged" | "topk" | "moe" | "w4a16";
+const problems: { id: ProblemId; name: string; regime: string; what: string }[] = [
+  { id: "fp8", name: "FP8 GEMM", regime: "compute", what: "fp8 e4m3 × fp8 matrix multiply with per-channel scales, 4 shapes incl. an unaligned K." },
+  { id: "kda", name: "Kimi Delta Attention", regime: "compute", what: "Chunk-parallel KDA forward (chunk 64), a long sequential recurrence across chunks." },
+  { id: "paged", name: "Paged Attention", regime: "memory", what: "Single-token decode over a paged bf16 KV cache with GQA, non-power-of-2 lengths." },
+  { id: "topk", name: "Top-k", regime: "memory", what: "Row-wise fp32 top-k (values + indices); torch.topk / sort are banned." },
+  { id: "moe", name: "MoE up-proj + SwiGLU", regime: "compute", what: "Grouped GEMM over up to 128 experts with fused SwiGLU; matmul ops banned." },
+  { id: "w4a16", name: "W4A16 GEMM", regime: "memory", what: "int4 weights (group-128 scales + zeros) × bf16 activations, decode to prefill." },
+];
+
+const sorted = [...models].sort((a, b) => b.passed - a.passed || b.geomean - a.geomean);
+const maxGeo = Math.max(...models.map(m => m.geomean));
+const best: Record<string, number> = {};
+for (const p of problems) {
+  best[p.id] = Math.max(...models.map(m => m.results[p.id].peak ?? 0));
+}
+const sessions = models.length * problems.length;
+const passedSessions = models.reduce((s, m) => s + m.passed, 0);
+
+const statusLabel: Record<string, string> = {
+  correct: "pass",
+  wrong_output: "wrong output",
+  runtime_error: "crash",
+  import_error: "import error",
+  forbidden_op: "banned op",
+  timeout: "timeout",
+};
+const statusClass = (s: string) =>
+  s === "correct" ? "bg-accent" : s === "forbidden_op" ? "bg-foreground" : "border border-foreground/60 bg-transparent";
+---
+
+<Layout title={`${pageTitle} | ${SITE.title}`} description={pageDesc}>
+  <Header />
+  <Breadcrumb />
+  <main id="main-content" class="mx-auto w-full max-w-app px-4 pb-12">
+    <section id="kernelbench" class="!px-0">
+      <h1 class="text-2xl font-semibold tracking-wide sm:text-3xl">{pageTitle}</h1>
+      <p class="mt-2 italic opacity-80">{pageDesc}</p>
+      <p class="mt-1 text-sm opacity-60">Runs: 13–14 October 2026 · plain Hermes Agent, no extra skills</p>
+      <p class="mt-3 mb-8 text-sm">
+        <a class="text-accent underline decoration-dashed underline-offset-4" href={REPO} target="_blank" rel="noopener noreferrer">
+          All 30 kernels, the harness and raw results on GitHub ↗
+        </a>
+      </p>
+
+      <!-- headline numbers -->
+      <dl class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div class="rounded-lg border border-border bg-muted/10 p-4">
+          <dt class="text-xs tracking-wide uppercase opacity-70">Models</dt>
+          <dd class="mt-1 text-2xl font-semibold">{models.length}</dd>
+        </div>
+        <div class="rounded-lg border border-border bg-muted/10 p-4">
+          <dt class="text-xs tracking-wide uppercase opacity-70">Problems</dt>
+          <dd class="mt-1 text-2xl font-semibold">{problems.length}</dd>
+        </div>
+        <div class="rounded-lg border border-border bg-muted/10 p-4">
+          <dt class="text-xs tracking-wide uppercase opacity-70">Agent sessions</dt>
+          <dd class="mt-1 text-2xl font-semibold">{sessions}</dd>
+        </div>
+        <div class="rounded-lg border border-border bg-muted/10 p-4">
+          <dt class="text-xs tracking-wide uppercase opacity-70">Correct kernels</dt>
+          <dd class="mt-1 text-2xl font-semibold">{passedSessions}/{sessions}</dd>
+        </div>
+      </dl>
+
+      <!-- leaderboard -->
+      <h2 class="mt-12 text-xl font-semibold">Leaderboard</h2>
+      <p class="mt-1 mb-5 text-sm opacity-80">
+        Score = fraction of the RTX PRO 6000's roofline peak that the kernel reaches (KernelBench's own
+        <code>benchmark.py</code>), geometric mean over the problems the model solved. Higher is better.
+      </p>
+      <ol class="flex flex-col gap-4">
+        {
+          sorted.map((m, i) => (
+            <li class="rounded-lg border border-border bg-muted/10 p-4">
+              <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <span class="font-semibold">
+                  <span class="mr-2 opacity-50">{i + 1}.</span>
+                  {m.name}
+                </span>
+                <span class="text-sm opacity-80">
+                  {m.passed}/6 solved · {m.minutes} min agent time ·{" "}
+                  {m.cost === null ? "subscription" : `$${m.cost.toFixed(2)}`}
+                </span>
+              </div>
+              <div class="mt-3 flex items-center gap-3">
+                <div class="h-3 flex-1 overflow-hidden rounded-full bg-muted/40" aria-hidden="true">
+                  <div class="h-full rounded-full bg-accent" style={`width:${(m.geomean / maxGeo) * 100}%`} />
+                </div>
+                <span class="w-14 text-right font-semibold tabular-nums">{m.geomean.toFixed(1)}%</span>
+              </div>
+              <p class="mt-2 text-xs opacity-60">
+                <code>{m.id}</code> via {m.via} ·{" "}
+                <a class="text-accent underline decoration-dashed underline-offset-4" href={`${REPO}/tree/main/solutions/${m.slug}`} target="_blank" rel="noopener noreferrer">kernels</a>
+              </p>
+            </li>
+          ))
+        }
+      </ol>
+      <p class="mt-4 text-sm opacity-80">
+        The top four are within 0.4 points of each other. With one attempt per problem, that gap is noise, not a
+        ranking. GLM 5.3's lower score comes from failing one problem.
+      </p>
+
+      <!-- per-problem table -->
+      <h2 class="mt-12 text-xl font-semibold">Per-problem results</h2>
+      <p class="mt-1 mb-5 text-sm opacity-80">
+        % of peak for the final, hidden-graded kernel. <strong>Bold</strong> = best on that problem.
+        <span class="text-accent">†</span> = the agent hit the 45-minute cap (its last saved
+        <code>solution.py</code> was graded). ✗ = failed the hidden grade. Click a score to read that kernel.
+      </p>
+      <div class="overflow-x-auto rounded-lg border border-border">
+        <table class="w-full min-w-[640px] border-collapse text-sm">
+          <thead>
+            <tr class="bg-muted/30 text-left">
+              <th class="p-3 font-semibold">Model</th>
+              {problems.map(p => <th class="p-3 text-right font-semibold">{p.id}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {
+              sorted.map(m => (
+                <tr class="border-t border-border/60">
+                  <td class="p-3 font-medium whitespace-nowrap">{m.name}</td>
+                  {problems.map(p => {
+                    const r = m.results[p.id];
+                    const isBest = r.peak !== null && r.peak === best[p.id];
+                    return (
+                      <td class="p-3 text-right tabular-nums whitespace-nowrap">
+                        <a
+                          href={solutionUrl(m.slug, p.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="decoration-dashed underline-offset-4 hover:underline"
+                          title={`${m.name} · ${p.id} · solution.py`}
+                        >
+                          {r.pass ? (
+                            <span class:list={[{ "font-bold text-accent": isBest }]}>
+                              {r.peak!.toFixed(1)}%{r.timeout && <span class="text-accent">†</span>}
+                            </span>
+                          ) : (
+                            <span class="font-semibold opacity-70">✗</span>
+                          )}
+                        </a>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- practice traces -->
+      <h2 class="mt-12 text-xl font-semibold">How each agent got there</h2>
+      <p class="mt-1 mb-4 text-sm opacity-80">
+        Every square is one practice run on the GPU (max 6 per problem), in order.
+      </p>
+      <div class="mb-5 flex flex-wrap gap-x-5 gap-y-2 text-xs">
+        <span class="inline-flex items-center gap-2"><span class="inline-block size-3 rounded-sm bg-accent" />passed check.py</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block size-3 rounded-sm border border-foreground/60" />wrong output / crash</span>
+        <span class="inline-flex items-center gap-2"><span class="inline-block size-3 rounded-sm bg-foreground" />used a banned op</span>
+      </div>
+      <div class="overflow-x-auto rounded-lg border border-border">
+        <table class="w-full min-w-[640px] border-collapse text-sm">
+          <thead>
+            <tr class="bg-muted/30 text-left">
+              <th class="p-3 font-semibold">Model</th>
+              {problems.map(p => <th class="p-3 font-semibold">{p.id}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {
+              sorted.map(m => (
+                <tr class="border-t border-border/60">
+                  <td class="p-3 font-medium whitespace-nowrap">{m.name}</td>
+                  {problems.map(p => {
+                    const r = m.results[p.id];
+                    return (
+                      <td class="p-3">
+                        <div class="flex gap-1" title={`${r.minutes} min · final: ${r.pass ? "pass" : r.status}`}>
+                          {r.practice.map(s => (
+                            <span
+                              class:list={["inline-block size-3 rounded-sm", statusClass(s)]}
+                              title={statusLabel[s] ?? s}
+                            />
+                          ))}
+                        </div>
+                        <div class="mt-1 text-xs opacity-60">{r.minutes} min</div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- findings -->
+      <h2 class="mt-12 text-xl font-semibold">What stood out</h2>
+      <ul class="mt-4 flex flex-col gap-4 leading-relaxed">
+        <li class="rounded-lg border border-border bg-muted/10 p-4">
+          <span class="font-semibold text-accent">Correct is (mostly) solved; fast is not.</span>
+          29 of 30 sessions produced a kernel that passed every shape, seed and stress case. But on Kimi Delta
+          Attention and top-k every model sits at 1–3% of peak.
+        </li>
+        <li class="rounded-lg border border-border bg-muted/10 p-4">
+          <span class="font-semibold text-accent">The one failure was a process failure.</span>
+          GLM 5.3 had a passing fp8 kernel, used its last practice run, then made one more "fix" it could not test
+          and submitted it. That version needed 104 KB of shared memory on a GPU with 101 KB. Kimi and Qwen hit the
+          same situation on other problems and submitted their last <em>verified</em> version instead.
+        </li>
+        <li class="rounded-lg border border-border bg-muted/10 p-4">
+          <span class="font-semibold text-accent">First instinct: take the shortcut.</span>
+          On top-k, Kimi K3 and GLM 5.3 both opened with <code>torch.topk</code>, which the problem bans. The
+          checker rejected it and both then wrote their own selection kernel. GPT 6.1 never tried it.
+        </li>
+        <li class="rounded-lg border border-border bg-muted/10 p-4">
+          <span class="font-semibold text-accent">An agent debugged my harness.</span>
+          Long GPU checks (&gt;150 s) were coming back empty because of a redirect bug in my test tool. Kimi K3
+          worked out why and wrote its own runner that followed the redirect, while still counting against, and
+          logging to, the same practice budget.
+        </li>
+        <li class="rounded-lg border border-border bg-muted/10 p-4">
+          <span class="font-semibold text-accent">Speed of the agent varies 7×.</span>
+          GPT 6.1 finished all six problems in 36 minutes of agent time; Qwen 3.8 Max took 244 and hit the
+          45-minute cap three times. DeepSeek V4.1 Flash had the best average score at the lowest model cost ($0.87
+          for all six).
+        </li>
+      </ul>
+
+      <!-- problems -->
+      <h2 class="mt-12 text-xl font-semibold">The six problems</h2>
+      <ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {
+          problems.map(p => (
+            <li class="rounded-lg border border-border bg-muted/10 p-4">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="font-semibold">{p.name}</span>
+                <span class="rounded-full border border-accent/40 px-2.5 py-0.5 text-xs text-accent">{p.regime}-bound</span>
+              </div>
+              <p class="mt-2 text-sm opacity-85">{p.what}</p>
+            </li>
+          ))
+        }
+      </ul>
+
+      <!-- method -->
+      <h2 class="mt-12 text-xl font-semibold">How it was run</h2>
+      <ol class="mt-4 flex list-decimal flex-col gap-3 pl-6 leading-relaxed">
+        <li>
+          Each model runs inside <a class="text-accent underline decoration-dashed underline-offset-4" href="https://github.com/NousResearch/hermes-agent" target="_blank" rel="noopener noreferrer">Hermes Agent</a>
+          with a terminal, a task folder (the problem's prompt, <code>reference.py</code>, shapes) and no GPU.
+        </li>
+        <li>
+          A practice tool sends <code>solution.py</code> to a remote RTX PRO 6000 (Blackwell, sm_120), runs
+          KernelBench's <code>check.py</code> and <code>benchmark.py</code>, and prints the result. Budget: 6 runs
+          and 45 minutes per problem.
+        </li>
+        <li>
+          When the agent stops, a hidden grader re-runs the final kernel: KernelBench's correctness check
+          (every shape, 3 seeds, numeric and property stress cases, banned-op grep) plus a runtime op recorder that
+          flags any banned PyTorch op (matmul, softmax, topk…) actually executed, even if hidden behind
+          <code>getattr</code> or a CUDA graph. The grader was itself tested on known good, wrong and cheating
+          solutions before any model ran.
+        </li>
+        <li>One attempt per model per problem. Same prompt, tools and limits for every model.</li>
+      </ol>
+
+      <h2 class="mt-12 text-xl font-semibold">Caveats</h2>
+      <ul class="mt-4 flex list-disc flex-col gap-2 pl-6 text-sm leading-relaxed opacity-85">
+        <li>One run per cell: good for the overall pattern, not for ranking models that are 0.4 points apart.</li>
+        <li>
+          A test-tool bug broke most practice runs on the MoE problem for the first three models to reach it. After
+          the fix, MoE was re-run for those models and the re-run is what's shown. Two hidden grades that hit a GPU
+          service HTTP 500 were re-graded on the same saved kernel.
+        </li>
+        <li>
+          Costs are Hermes' own estimate of OpenRouter spend. GPT 6.1 ran on a Codex subscription, so its cost
+          isn't comparable.
+        </li>
+        <li>The runtime op recorder is stricter than upstream KernelBench, which only greps the source text.</li>
+      </ul>
+
+      <p class="mt-10 text-sm opacity-70">
+        Problems from
+        <a class="text-accent underline decoration-dashed underline-offset-4" href="https://github.com/Infatoshi/kernelbench.com" target="_blank" rel="noopener noreferrer">KernelBench-Hard</a>
+        by Elliot Arledge (MIT), <code>problems-rtxpro6000</code>. GPU access via Modal.
+      </p>
+    </section>
+  </main>
+  <Footer />
+</Layout>
