@@ -41,7 +41,7 @@ const passedSessions = models.reduce((s, m) => s + m.passed, 0);
 
 ---
 
-<Layout title={`${pageTitle} | ${SITE.title}`} description={pageDesc}>
+<Layout title={`${pageTitle} | ${SITE.title}`} description={pageDesc} ogImage="/kernelbench/og.png">
   <Header />
   <Breadcrumb />
   <main id="main-content" class="mx-auto w-full max-w-app px-4 pb-12">
