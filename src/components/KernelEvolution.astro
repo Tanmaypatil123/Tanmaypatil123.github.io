@@ -1,0 +1,303 @@
+---
+// Practice-run evolution chart for the KernelBench page: one panel per problem, one line per model,
+// running-best latency over the agent's practice runs. Data: src/data/kernelbench_evolution.json,
+// rebuilt from Hermes' session log by evolution.py in the hermes-kernelbench repo.
+import runs from "@/data/kernelbench_evolution.json";
+
+type Attempt = { status: string; peak: number | null; geo_ms: number | null; minute: number; label: string | null };
+type Run = {
+  model: string; slug: string; task: string; story?: string | null;
+  final: { status: string; peak: number | null; ms: number[]; timeout: boolean };
+  attempts: Attempt[];
+};
+
+const PROBLEMS: { id: string; name: string }[] = [
+  { id: "w4a16", name: "W4A16 GEMM" },
+  { id: "fp8", name: "FP8 GEMM" },
+  { id: "paged", name: "Paged Attention" },
+  { id: "topk", name: "Top-k" },
+  { id: "kda", name: "KDA" },
+  { id: "moe", name: "MoE" },
+];
+// fixed order = fixed colour slot per model (never by rank)
+const MODELS = [
+  { slug: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", short: "DeepSeek" },
+  { slug: "qwen3.8-max", name: "Qwen 3.8 Max", short: "Qwen" },
+  { slug: "kimi-k3", name: "Kimi K3", short: "Kimi" },
+  { slug: "gpt-6.1", name: "GPT 6.1", short: "GPT" },
+  { slug: "glm-5.3", name: "GLM 5.3", short: "GLM" },
+];
+const slot = (slug: string) => MODELS.findIndex(m => m.slug === slug) + 1;
+const NEW_BEST = 1.05; // a try counts as a new best only if it beats the old best by >5% (timing noise)
+
+const W = 760, H = 380;
+const M = { top: 50, right: 24, bottom: 42, left: 62 };
+const PW = W - M.left - M.right, PH = H - M.top - M.bottom;
+const FAIL_Y = 26;
+
+const geo = (xs: number[]) => Math.exp(xs.reduce((s, x) => s + Math.log(x), 0) / xs.length);
+const fmtMs = (ms: number) => (ms < 1 ? `${+(ms * 1000).toPrecision(3)} µs` : `${+ms.toPrecision(3)} ms`);
+const fmtTick = (ms: number) => (ms < 1 ? `${+(ms * 1000).toPrecision(2)}µs` : `${+ms.toPrecision(2)}ms`);
+
+function niceTicks(lo: number, hi: number) {
+  for (const ms of [[1, 2, 5], [1, 1.5, 2, 3, 5, 7], [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8]]) {
+    const out: number[] = [];
+    for (let e = Math.floor(Math.log10(lo)) - 1; e <= Math.ceil(Math.log10(hi)) + 1; e++)
+      for (const m of ms) {
+        const v = m * 10 ** e;
+        if (v >= lo && v <= hi) out.push(v);
+      }
+    if (out.length >= 3) return out;
+  }
+  return [lo, hi];
+}
+
+const panels = PROBLEMS.map(p => {
+  const pr = (runs as Run[]).filter(r => r.task === p.id).sort((a, b) => slot(a.slug) - slot(b.slug));
+  const nTry = Math.max(...pr.map(r => r.attempts.length));
+  const cols = nTry + 1; // last column = hidden grade
+  const xOf = (i: number) => M.left + (i * PW) / (cols - 1); // i = 0-based column
+  const all = pr.flatMap(r => [...r.attempts.map(a => a.geo_ms ?? 0), r.final.ms.length ? geo(r.final.ms) : 0]).filter(v => v > 0);
+  const lo = Math.min(...all) / 1.12, hi = Math.max(...all) * 1.12;
+  const yOf = (ms: number) => M.top + ((Math.log(hi) - Math.log(ms)) / (Math.log(hi) - Math.log(lo))) * PH;
+  const ticks = niceTicks(lo, hi);
+
+  const series = pr.map(r => {
+    let best: number | null = null, n = 0;
+    const pts = r.attempts.map((a, i) => {
+      const ok = a.status === "correct" && a.geo_ms !== null && a.peak !== null;
+      let kept = false;
+      if (ok && (best === null || a.peak! > best * NEW_BEST)) kept = true;
+      if (ok) best = best === null ? a.peak! : Math.max(best, a.peak!);
+      return { i, a, ok, kept, num: kept ? ++n : 0, x: xOf(i), y: ok ? yOf(a.geo_ms!) : FAIL_Y };
+    });
+    // running best: step line through every try from the first passing one
+    let path = "", bestMs: number | null = null;
+    for (const p of pts) {
+      if (p.ok && (bestMs === null || p.a.geo_ms! < bestMs)) {
+        path += bestMs === null ? `M${p.x},${p.y}` : `H${p.x}V${p.y}`;
+        bestMs = p.a.geo_ms!;
+      }
+    }
+    if (bestMs !== null) path += `H${xOf(pts.length - 1)}`;
+    const finalOk = r.final.status === "correct" && r.final.ms.length > 0;
+    const finalMs = finalOk ? geo(r.final.ms) : null;
+    const firstOk = pts.find(p => p.ok);
+    const bestPt = pts.filter(p => p.ok).sort((a, b) => b.a.peak! - a.a.peak!)[0];
+    const steps = pts.filter(p => p.kept).map((p, k, arr) => ({
+      num: p.num, i: p.i + 1, peak: p.a.peak!, ms: p.a.geo_ms!, label: p.a.label,
+      prev: k ? arr[k - 1].a.geo_ms! : null,
+    }));
+    return {
+      r, pts, path, steps, finalOk, finalMs,
+      final: { x: xOf(cols - 1), y: finalOk ? yOf(finalMs!) : FAIL_Y },
+      gain: firstOk && bestPt ? firstOk.a.geo_ms! / bestPt.a.geo_ms! : 1,
+    };
+  });
+  const lead = [...series].sort((a, b) => b.gain - a.gain)[0].r.slug;
+  return { ...p, cols, xOf, yOf, ticks, series, lead, nTry };
+});
+---
+
+<div class="kevo" data-kevo>
+  <div class="mb-3 flex flex-wrap gap-2" role="tablist" aria-label="Problem">
+    {
+      panels.map((p, i) => (
+        <button
+          type="button" role="tab" data-problem={p.id} aria-selected={i === 0 ? "true" : "false"}
+          class="kevo-tab rounded-full border border-border px-3 py-1 text-sm"
+        >{p.name}</button>
+      ))
+    }
+  </div>
+
+  {
+    panels.map((p, pi) => (
+      <section class="kevo-panel" data-panel={p.id} data-active={p.lead} hidden={pi !== 0}>
+        <div class="mb-2 flex flex-wrap gap-2" aria-label="Highlight a model">
+          {MODELS.map(m => (
+            <button
+              type="button" data-model={m.slug} aria-pressed={m.slug === p.lead ? "true" : "false"}
+              class="kevo-chip inline-flex items-center gap-2 rounded-full border border-border px-2.5 py-0.5 text-xs"
+            >
+              <span class={`kevo-swatch s${slot(m.slug)}`} aria-hidden="true" />
+              {m.name}
+            </button>
+          ))}
+        </div>
+
+        <svg viewBox={`0 0 ${W} ${H}`} class="kevo-svg" role="img"
+          aria-label={`${p.name}: kernel latency over practice runs, one line per model`}>
+          {/* failure band */}
+          <text x={M.left - 8} y={FAIL_Y + 4} text-anchor="end" class="kevo-axis">failed</text>
+          <line x1={M.left} x2={W - M.right} y1={FAIL_Y + 12} y2={FAIL_Y + 12} class="kevo-sep" />
+          {/* y grid (log scale) */}
+          {p.ticks.map(t => (
+            <g>
+              <line x1={M.left} x2={W - M.right} y1={p.yOf(t)} y2={p.yOf(t)} class="kevo-grid" />
+              <text x={M.left - 8} y={p.yOf(t) + 4} text-anchor="end" class="kevo-axis">{fmtTick(t)}</text>
+            </g>
+          ))}
+          {/* x axis */}
+          {Array.from({ length: p.cols }, (_, i) => (
+            <text x={p.xOf(i)} y={H - M.bottom + 18} text-anchor="middle" class="kevo-axis">
+              {i === p.cols - 1 ? "graded" : i + 1}
+            </text>
+          ))}
+          <line x1={(p.xOf(p.cols - 2) + p.xOf(p.cols - 1)) / 2} x2={(p.xOf(p.cols - 2) + p.xOf(p.cols - 1)) / 2}
+            y1={M.top - 6} y2={H - M.bottom} class="kevo-sep" />
+          <text x={M.left + PW / 2} y={H - 6} text-anchor="middle" class="kevo-axis">practice run →</text>
+          <text x={14} y={M.top + PH / 2} text-anchor="middle" class="kevo-axis"
+            transform={`rotate(-90 14 ${M.top + PH / 2})`}>typical runtime (log) · lower is better</text>
+
+          {p.series.map(s => (
+            <g class={`kevo-series s${slot(s.r.slug)}`} data-model={s.r.slug}>
+              <path d={s.path} class="kevo-line" />
+              {s.pts.map(pt => (
+                pt.ok ? (
+                  <g>
+                    <circle cx={pt.x} cy={pt.y} r={pt.kept ? 5 : 3.5} class={pt.kept ? "kevo-kept" : "kevo-try"} />
+                    <circle cx={pt.x} cy={pt.y} r={11} class="kevo-hit">
+                      <title>{`${s.r.model} · run ${pt.i + 1} · ${fmtMs(pt.a.geo_ms!)} · ${pt.a.peak}% of peak${pt.a.label ? ` · ${pt.a.label}` : ""}`}</title>
+                    </circle>
+                  </g>
+                ) : (
+                  <text x={pt.x} y={pt.y + 4} text-anchor="middle" class={`kevo-fail ${pt.a.status === "infra_error" ? "is-infra" : ""}`}>
+                    {pt.a.status === "infra_error" ? "○" : "✕"}
+                    <title>{`${s.r.model} · run ${pt.i + 1} · ${pt.a.status === "infra_error" ? "GPU service error (not counted)" : pt.a.status.replace("_", " ")}`}</title>
+                  </text>
+                )
+              ))}
+              {s.finalOk ? (
+                <rect x={s.final.x - 5} y={s.final.y - 5} width="10" height="10" transform={`rotate(45 ${s.final.x} ${s.final.y})`} class="kevo-final">
+                  <title>{`${s.r.model} · hidden grade · ${fmtMs(s.finalMs!)} · ${s.r.final.peak}% of peak`}</title>
+                </rect>
+              ) : (
+                <text x={s.final.x} y={s.final.y + 4} text-anchor="middle" class="kevo-fail">✕
+                  <title>{`${s.r.model} · hidden grade · ${s.r.final.status.replace("_", " ")}`}</title>
+                </text>
+              )}
+              {s.pts.filter(pt => pt.kept).map(pt => (
+                <g class="kevo-badge">
+                  <circle cx={pt.x + 10} cy={pt.y - 13} r="8" />
+                  <text x={pt.x + 10} y={pt.y - 9.5} text-anchor="middle">{pt.num}</text>
+                </g>
+              ))}
+            </g>
+          ))}
+        </svg>
+
+        {p.series.map(s => (
+          <div class="kevo-steps" data-model={s.r.slug} hidden={s.r.slug !== p.lead}>
+            <p class="text-sm font-semibold">
+              <span class={`kevo-swatch s${slot(s.r.slug)} mr-1.5`} aria-hidden="true" />
+              {s.r.model} on {p.name}
+              {s.steps.length > 1 && (
+                <span class="font-normal opacity-75">
+                  {" "}· {fmtMs(s.steps[0].ms)} → {fmtMs(s.steps[s.steps.length - 1].ms)}
+                  {" "}({(s.steps[0].ms / s.steps[s.steps.length - 1].ms).toFixed(1)}× faster across practice)
+                </span>
+              )}
+              {!s.finalOk && <span class="font-normal text-accent"> · final kernel failed the hidden grade</span>}
+            </p>
+            {s.r.slug === "gpt-6.1" && (
+              <p class="mt-1 text-xs opacity-70">
+                GPT 6.1 ran through Codex sign-in, so its reasoning is encrypted and some edits went through scripts the
+                log can't replay. Speeds are complete; a few "what changed" notes are missing.
+              </p>
+            )}
+            <ol class="mt-2 flex flex-col gap-1.5 text-sm">
+              {s.steps.map(st => (
+                <li class="flex gap-2">
+                  <span class="kevo-num">{st.num}</span>
+                  <span>
+                    <span class="opacity-70 tabular-nums">run {st.i} · {fmtMs(st.ms)} · {st.peak.toFixed(1)}% of peak
+                      {st.prev !== null && ` · ${(st.prev / st.ms).toFixed(2)}×`}</span>
+                    {" "}{st.label ?? <span class="opacity-60">(edit not captured in the session log)</span>}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </section>
+    ))
+  }
+
+  <div class="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs opacity-80">
+    <span>● passing run</span>
+    <span>⬤ new best (&gt;5% faster), numbered</span>
+    <span>— running best</span>
+    <span>◆ hidden grade of the submitted kernel</span>
+    <span>✕ failed run</span>
+    <span>○ GPU-service error (not counted)</span>
+  </div>
+</div>
+
+<style>
+  .kevo {
+    --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+    --kevo-ink: var(--foreground);
+    --kevo-surface: var(--background);
+  }
+  :global(html[data-theme="dark"]) .kevo {
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  }
+  .s1 { --c: var(--s1); } .s2 { --c: var(--s2); } .s3 { --c: var(--s3); } .s4 { --c: var(--s4); } .s5 { --c: var(--s5); }
+  .kevo-svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .kevo-axis { font-size: 12px; fill: var(--kevo-ink); opacity: 0.65; }
+  .kevo-grid { stroke: var(--kevo-ink); stroke-opacity: 0.1; stroke-width: 1; }
+  .kevo-sep { stroke: var(--kevo-ink); stroke-opacity: 0.25; stroke-dasharray: 3 4; }
+  .kevo-line { fill: none; stroke: var(--c); stroke-width: 2; stroke-linejoin: round; }
+  .kevo-try { fill: var(--kevo-surface); stroke: var(--c); stroke-width: 1.5; }
+  .kevo-kept { fill: var(--c); stroke: var(--kevo-surface); stroke-width: 2; }
+  .kevo-final { fill: var(--c); stroke: var(--kevo-surface); stroke-width: 2; }
+  .kevo-hit { fill: transparent; }
+  .kevo-fail { font-size: 13px; fill: var(--c); font-weight: 700; }
+  .kevo-fail.is-infra { font-weight: 400; opacity: 0.7; }
+  .kevo-badge { display: none; }
+  .kevo-badge circle { fill: var(--kevo-surface); stroke: var(--c); stroke-width: 1.5; }
+  .kevo-badge text { font-size: 10px; font-weight: 700; fill: var(--kevo-ink); }
+  .kevo-series { transition: opacity 120ms; }
+  .kevo-series.is-dim { opacity: 0.18; }
+  .kevo-series.is-active .kevo-badge { display: inline; }
+  .kevo-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 9999px; background: var(--c); vertical-align: middle; }
+  .kevo-tab[aria-selected="true"], .kevo-chip[aria-pressed="true"] { background: var(--muted); border-color: var(--accent); }
+  .kevo-num {
+    flex: none; display: inline-grid; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 9999px;
+    border: 1.5px solid var(--accent); font-size: 0.7rem; font-weight: 700;
+  }
+  .kevo-steps { margin-top: 0.75rem; }
+</style>
+
+<script>
+  function setModel(panel: HTMLElement, slug: string) {
+    panel.dataset.active = slug;
+    panel.querySelectorAll<SVGGElement>(".kevo-series").forEach(g => {
+      g.classList.toggle("is-active", g.dataset.model === slug);
+      g.classList.toggle("is-dim", g.dataset.model !== slug);
+      if (g.dataset.model === slug) g.parentNode?.appendChild(g); // draw on top
+    });
+    panel.querySelectorAll<HTMLButtonElement>(".kevo-chip").forEach(b =>
+      b.setAttribute("aria-pressed", String(b.dataset.model === slug)));
+    panel.querySelectorAll<HTMLElement>(".kevo-steps").forEach(d => (d.hidden = d.dataset.model !== slug));
+  }
+  function init() {
+    document.querySelectorAll<HTMLElement>("[data-kevo]").forEach(root => {
+      const panels = root.querySelectorAll<HTMLElement>(".kevo-panel");
+      panels.forEach(panel => {
+        setModel(panel, panel.dataset.active!);
+        panel.querySelectorAll<HTMLButtonElement>(".kevo-chip").forEach(b =>
+          b.addEventListener("click", () => setModel(panel, b.dataset.model!)));
+      });
+      root.querySelectorAll<HTMLButtonElement>(".kevo-tab").forEach(tab =>
+        tab.addEventListener("click", () => {
+          root.querySelectorAll<HTMLButtonElement>(".kevo-tab").forEach(t =>
+            t.setAttribute("aria-selected", String(t === tab)));
+          panels.forEach(p => (p.hidden = p.dataset.panel !== tab.dataset.problem));
+        }));
+    });
+  }
+  init();
+  document.addEventListener("astro:after-swap", init);
+</script>
