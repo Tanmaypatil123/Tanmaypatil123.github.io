@@ -24,8 +24,9 @@
     "role": "Author",
     "task": "Latent Decoding",
     "baseModel": "madebyollin/taef2",
-    "repo": "Patil/tiny-klein3-vae",
-    "link": "https://huggingface.co/Patil/tiny-klein3-vae",
+    "repo": "Patil/tiny-flux-klien-3-vae",
+    "link": "https://huggingface.co/Patil/tiny-flux-klien-3-vae",
+    "post": "/posts/2026/tiny-vae-flux3-klein",
     "description": "A 2.7M-parameter tiny decoder for FLUX 3 Image Klein latents, fine-tuned from TAEF2. FLUX 3 Klein ships the FLUX.2 autoencoder byte-for-byte, so the tiny model reads the same latents; distillation on 25.8k real photos with L1, LPIPS, a light PatchGAN loss and EMA weights, first at 512px and then 1024px, has a 26–32% smaller perceptual (LPIPS) gap to the full 84M-parameter VAE than TAEF2 on FLUX 3 generations. It decodes about 11x faster with roughly 4x less memory, for live previews, high-resolution decoding and memory-limited GPUs.",
     "tags": ["VAE", "Distillation", "FLUX 3", "Tiny Autoencoder", "Fast Decoding"]
   }

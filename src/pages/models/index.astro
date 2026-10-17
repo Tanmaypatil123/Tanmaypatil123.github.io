@@ -77,6 +77,15 @@ const pageDesc =
 
               <p class="mt-3 leading-relaxed">{model.description}</p>
 
+              {model.post && (
+                <a
+                  href={model.post}
+                  class="mt-3 inline-block text-sm font-medium text-accent underline decoration-dashed underline-offset-4"
+                >
+                  Read the write-up →
+                </a>
+              )}
+
               {model.tags && model.tags.length > 0 && (
                 <ul class="mt-4 flex flex-wrap gap-2">
                   {model.tags.map(tag => (

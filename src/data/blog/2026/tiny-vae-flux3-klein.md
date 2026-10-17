@@ -1,7 +1,7 @@
 ---
 title: "A Tiny VAE for FLUX 3 Klein: 30× Smaller, 11× Faster Decoding"
 author: Tanmay
-pubDatetime: 2026-10-17T10:00:00Z
+pubDatetime: 2026-10-17T04:00:00Z
 slug: tiny-vae-flux3-klein
 featured: true
 draft: false
@@ -283,7 +283,7 @@ Kodak LPIPS of the best checkpoint after each change, lower is better:
 
 ## 9. Reproduce it
 
-- **Weights and code:** [Patil/tiny-klein3-vae](https://huggingface.co/Patil/tiny-klein3-vae). It contains `tiny_klein3_v2.safetensors`, every intermediate checkpoint with its discriminator, the training, evaluation and generation scripts, and the logs.
+- **Weights and code:** [Patil/tiny-flux-klien-3-vae](https://huggingface.co/Patil/tiny-flux-klien-3-vae). It contains `tiny_klein3_v2.safetensors`, every intermediate checkpoint with its discriminator, the training, evaluation and generation scripts, and the logs.
 - **Use it** like TAEF2: build `TAESD(latent_channels=32, arch_variant="flux_2")` from [`taesd.py`](https://github.com/madebyollin/taesd), load the weights, and call `decoder(z_norm)`. In diffusers, use the wrapper from the [TAEF2 model card](https://huggingface.co/madebyollin/taef2) with this file in place of `taef2.safetensors`.
 - **Credits:** TAESD and TAEF2 by Ollin Boer Bohan (MIT). FLUX 3 Image Klein by Black Forest Labs (FLUX Kommunity License). Training photos from DIV2K and the Unsplash Lite dataset. This project is not affiliated with or endorsed by Black Forest Labs.
 
