@@ -16,7 +16,7 @@ description: "Distilling the FLUX 3 Image Klein autoencoder into a 2.7M-paramete
 canonicalURL: "https://tanmaypatil123.github.io/posts/2026/tiny-vae-flux3-klein"
 ---
 
-> **TL;DR.** FLUX 3 Image Klein ships the FLUX.2 autoencoder unchanged, so a tiny decoder trained for that latent space works for FLUX 3. I fine-tuned [TAEF2](https://huggingface.co/madebyollin/taef2) on 25.8k real photos with L1 + LPIPS + a light PatchGAN loss and weight averaging. The result, **Tiny Klein 3 VAE**, has **2.7M parameters instead of 84M**, decodes **11× faster at 1024²** with about **4× less memory**, and its perceptual gap to the full VAE (LPIPS) is **26–32% smaller than TAEF2's** on FLUX 3 generations. It is still visibly softer than the full VAE in the finest textures. Drag the sliders below and judge for yourself.
+> **TL;DR.** FLUX 3 Image Klein ships the FLUX.2 autoencoder unchanged, so a tiny decoder trained for that latent space works for FLUX 3. I fine-tuned [TAEF2](https://huggingface.co/madebyollin/taef2) on 25.8k real photos with L1 + LPIPS + a light PatchGAN loss and weight averaging. The result, **Tiny Klein 3 VAE**, has **2.7M parameters instead of 84M**, decodes **11× faster at 1024²** with about **4× less memory**, and its perceptual gap to the full VAE (LPIPS) is **26–32% smaller than TAEF2's** on FLUX 3 generations. It is still visibly softer than the full VAE in the finest textures. It also works for image editing, including bounding-box edits, as long as the full VAE encodes the reference images. Drag the sliders below and judge for yourself.
 
 <style>
 .tv{--tv-line:color-mix(in srgb,var(--foreground) 14%,transparent)}
@@ -147,7 +147,7 @@ $$
 | 3. + EMA, main run | 16,000 | 512 | 16 | 6e-5 |
 | 4. high-resolution finish | 3,000 | 1024 | 4 | 2e-5 |
 
-\*Stages 2a and 2b are the kept parts of two runs I stopped early; each later stage starts from the best checkpoint of the one before. Section 6 has the details. All in, about 6.5 GPU-hours including the abandoned steps, or roughly $6 of rented compute.
+\*Stages 2a and 2b are the kept parts of two runs I stopped early; each later stage starts from the best checkpoint of the one before. Section 7 has the details. All in, about 6.5 GPU-hours including the abandoned steps, or roughly $6 of rented compute.
 
 The checkpoint kept at each stage is the one with the lowest LPIPS on the 24 Kodak photos.
 
@@ -197,7 +197,58 @@ Each image is a FLUX 3 Klein base generation (seed 7, 50 steps). **Left of the l
 <div id="tv-gallery"></div>
 </figure>
 
-## 6. What worked and what didn't
+## 6. Does it work for image editing?
+
+FLUX 3 Klein also edits images: it takes up to 10 reference images and a caption, which can include a table of bounding boxes. Editing uses the VAE twice. The **encoder** turns each reference image into latents the transformer conditions on, and the **decoder** turns the result back into pixels. My model only replaces the decoder, so I tested three setups:
+
+- **A:** full VAE encoder and decoder (the baseline).
+- **B:** full VAE encoder, tiny decoder. It decodes **the same latent as A**, so any difference is decoder error only.
+- **C:** tiny encoder and tiny decoder, an all-tiny pipeline with its own generation.
+
+The tests: a plain edit (recolor a sweater), a text edit, a bounding-box **add** (put a cat inside a given box) and **remove** (take out a lamp), and a two-reference composition. "Preserved region" is a part of the image the edit should leave alone, compared with the reference. Same seed everywhere, 50 steps, FLUX 3 Klein base.
+
+| Edit | B vs A | C vs A | Preserved region: A / B / C |
+| --- | ---: | ---: | ---: |
+| Recolor sweater | 0.021 | 0.064 | 0.015 / 0.027 / 0.068 |
+| Change chalk text | 0.025 | 0.047 | 0.033 / 0.043 / 0.059 |
+| Bbox: add a cat | 0.026 | 0.040 | 0.012 / 0.028 / 0.031 |
+| Bbox: remove a lamp | 0.025 | 0.038 | 0.012 / 0.027 / 0.031 |
+| Two references | 0.017 | **0.305** | — |
+
+All numbers are LPIPS, lower is better.
+
+<figure class="tv-fig">
+<div class="tv-tabs" id="tv-edit-tabs" role="toolbar" aria-label="Choose an edit"></div>
+<div id="tv-edits"></div>
+<figcaption>Reference, then the three setups. A and B share one generated latent; C is its own generation from tiny-encoded references.</figcaption>
+</figure>
+
+- **With the full encoder (B), editing works exactly like text-to-image.** Every edit lands the same way: the cat is in the same box, the new text is spelled right, the same lamp is gone. The only difference is the decoder's usual softness, LPIPS 0.017–0.026 against A, the same range as for text-to-image. Bounding-box edits behave no differently, because the boxes live in the caption, which the VAE never sees.
+- **The preserved regions get slightly softer, not changed.** With B, the untouched parts sit about 0.01–0.015 LPIPS further from the reference than with A. That is the tiny decoder's own error, not the edit leaking.
+- **Don't use the tiny encoder for editing.** Its latents only roughly match the full encoder's (cosine 0.90–0.94), and the transformer conditions on them. On single edits that adds drift. With two references the model composed **a different picture** (different hand pose and framing, LPIPS 0.31), with latents at cosine 0.76 to A's. I never fine-tuned the encoder, so this is expected. A distilled encoder would be the next thing to train.
+
+### Editing the same image again and again
+
+Editing an edit compounds errors. I ran three edits in a row on the portrait (recolor the sweater → add glasses → swap the background), each round feeding its own output back as the next reference:
+
+| Round | B vs A | C vs A |
+| --- | ---: | ---: |
+| 1. recolor | 0.021 | 0.064 |
+| 2. + glasses | 0.055 | 0.098 |
+| 3. + new background | 0.105 | 0.193 |
+
+<figure class="tv-fig">
+<div class="tv-crops" style="grid-template-columns:repeat(3,1fr)">
+<figure><img src="/assets/tiny-vae-flux3/edits/chain3_A.webp" alt="Round 3 of chained edits, full VAE" loading="lazy"><span>A · full VAE</span></figure>
+<figure><img src="/assets/tiny-vae-flux3/edits/chain3_B.webp" alt="Round 3 of chained edits, full encoder plus tiny decoder" loading="lazy"><span>B · tiny decoder</span></figure>
+<figure><img src="/assets/tiny-vae-flux3/edits/chain3_C.webp" alt="Round 3 of chained edits, tiny encoder and decoder" loading="lazy"><span>C · all tiny</span></figure>
+</div>
+<figcaption>After three rounds of editing. B and C have drifted in color and contrast: warmer skin, more orange hair, deeper shadows.</figcaption>
+</figure>
+
+The drift is not just softness. By round 3, B and C show a visible **color and contrast shift**. Each round's small decoder error becomes part of the next reference, and the model faithfully keeps it ("everything else stays unchanged"). **For multi-round editing, use the tiny decoder for previews but feed the full-VAE decode back as the next reference.** That breaks the loop for the cost of one full decode per round.
+
+## 7. What worked and what didn't
 
 Kodak LPIPS of the best checkpoint after each change, lower is better:
 
@@ -221,15 +272,16 @@ Kodak LPIPS of the best checkpoint after each change, lower is better:
 <figcaption>Kodak LPIPS during stage 3 (steps 0–16k, 512px) and stage 4 (16k–19k, 1024px). Lower is better. The raw weights jump around while the EMA copy improves steadily.</figcaption>
 </figure>
 
-## 7. Limitations
+## 8. Limitations
 
 - **It is still a 1.34M-parameter decoder.** On Kodak it reaches 0.031 LPIPS against the full VAE's 0.014. Look at the gallery crops: hair, skin pores, neon text and small high-contrast detail come out slightly smoother. For final renders the full VAE is still better. For previews, drafts and memory-limited setups the tiny one is the better trade.
 - **Tiling is not seamless out of the box.** The GroupNorm branch computes image-wide statistics, so decoding tiles separately gives each tile slightly different statistics. Compute those once over the whole latent, or blend overlapping tiles.
-- **Only the decoder was trained.** The encoder, used for image-to-image and editing, is TAEF2's original.
+- **Only the decoder was trained.** The encoder is TAEF2's original and is not good enough to feed editing references (section 6). Keep the full VAE encoder for editing.
+- **Chained edits drift.** Re-editing the tiny decoder's output compounds into a visible color and contrast shift after a few rounds. Feed full-VAE decodes back instead.
 - **Evaluation is small.** 24 Kodak photos plus 14 generated images, one seed each. The differences are consistent across images, but the exact percentages would move with a bigger set.
 - **The latent format is inferred, not documented.** The VAE file is byte-identical to FLUX.2's today. A future FLUX 3 VAE update would need a re-check.
 
-## 8. Reproduce it
+## 9. Reproduce it
 
 - **Weights and code:** [Patil/tiny-klein3-vae](https://huggingface.co/Patil/tiny-klein3-vae). It contains `tiny_klein3_v2.safetensors`, every intermediate checkpoint with its discriminator, the training, evaluation and generation scripts, and the logs.
 - **Use it** like TAEF2: build `TAESD(latent_channels=32, arch_variant="flux_2")` from [`taesd.py`](https://github.com/madebyollin/taesd), load the weights, and call `decoder(z_norm)`. In diffusers, use the wrapper from the [TAEF2 model card](https://huggingface.co/madebyollin/taef2) with this file in place of `taef2.safetensors`.
@@ -300,6 +352,40 @@ Kodak LPIPS of the best checkpoint after each change, lower is better:
       tabs.appendChild(b);
     });
     show(0);
+  }
+
+  // editing comparison: reference + three VAE setups
+  var E = [
+    { id: "recolor", t: "Recolor", d: "“Change the cream sweater to deep emerald green”" },
+    { id: "text", t: "Text", d: "“Change the heading to ‘WEEKEND BRUNCH’”" },
+    { id: "bbox_add", t: "Bbox add", d: "Add a sleeping orange cat inside a given box on the table" },
+    { id: "bbox_remove", t: "Bbox remove", d: "Remove the green lamp in a given box" },
+    { id: "multi_ref", t: "Two references", d: "Woman from image 1 holding the camera from image 2 (only image 1 shown)" }
+  ];
+  var et = document.getElementById("tv-edit-tabs"), eg = document.getElementById("tv-edits");
+  if (et && eg) {
+    var EB = "/assets/tiny-vae-flux3/edits/";
+    var cell = function (id, p, l) {
+      return '<figure><img src="' + EB + id + "_" + p + '.webp" alt="' + l + '" loading="lazy"><span>' + l + "</span></figure>";
+    };
+    var showE = function (i) {
+      var e = E[i];
+      et.querySelectorAll("button").forEach(function (b, j) { b.setAttribute("aria-pressed", j === i ? "true" : "false"); });
+      eg.innerHTML =
+        '<p class="tv-prompt" style="margin:0 0 .6rem"><b>Edit:</b> ' + e.d + "</p>" +
+        '<div class="tv-crops">' +
+        cell(e.id, "ref", "Reference") + cell(e.id, "A", "A · full VAE") +
+        cell(e.id, "B", "B · full encoder + tiny decoder") + cell(e.id, "C", "C · tiny encoder + tiny decoder") +
+        "</div>";
+    };
+    E.forEach(function (e, i) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = e.t;
+      b.addEventListener("click", function () { showE(i); });
+      et.appendChild(b);
+    });
+    showE(0);
   }
 
   // Kodak LPIPS during the EMA run (stage 3: 0-16k @512, stage 4: 16k-19k @1024)
