@@ -31,25 +31,35 @@ are stored so every player in the room sees the same game.
 purchases are connected, with money) for support. Real-money payments are processed by Google Play.
 We never receive your card or bank details.
 
+**Ads and advertising identifiers.** Sarkar shows ads through Unity LevelPlay (ironSource mediation),
+including optional rewarded videos that give in-game coins or gems. To show and measure ads, LevelPlay
+and the ad networks it works with may collect your device's advertising ID, IP address, device model
+and app interactions with ads. You can reset or delete your advertising ID, or opt out of personalised
+ads, in your Android settings. We do not control how mediated ad networks use this data beyond showing
+you ads. See Unity's and ironSource's privacy policies for details. Buying **Remove ads** turns off
+ads other than rewarded videos you choose to watch.
+
 **Local-only data.** Sound, music, vibration and language settings are also kept on your device.
 
 ## What we do not collect
 
-Sarkar does not show ads, does not use the advertising ID, does not use third-party analytics, and does
-not access your location, contacts, camera, microphone or files. We do not sell your data or share it
-with advertisers.
+Sarkar does not use third-party analytics, and does not access your location, contacts, camera,
+microphone or files. Apart from what the ad partners above collect to show ads, we do not sell your
+data or share it with anyone else.
 
 ## Who processes your data
 
 - **Unity Technologies** (Unity Authentication) for sign-in.
 - **Supabase** for storing your profile, progress and online matches.
+- **Unity LevelPlay (ironSource)** and its mediated ad networks for ads.
 - **Google Play** for downloads and payments.
 
 Data is sent over encrypted (HTTPS) connections.
 
 ## Children's privacy
 
-Sarkar is not directed at children under 13. If you believe a child has given us personal information,
+Sarkar is not directed at children under 13 and tells its ad partners it is not a child-directed app.
+If you believe a child has given us personal information,
 contact us using the details below and we will delete it.
 
 ## Data deletion
